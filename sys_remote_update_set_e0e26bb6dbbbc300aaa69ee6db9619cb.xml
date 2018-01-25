@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<unload unload_date="2018-01-25 17:43:51">
+<sys_remote_update_set action="INSERT_OR_UPDATE">
+<application display_value="Human Resources: Core">d4ac3fff5b311200a4656ede91f91af2</application>
+<application_name>Human Resources: Core</application_name>
+<application_scope>sn_hr_core</application_scope>
+<application_version>2.0.26</application_version>
+<collisions/>
+<commit_date/>
+<deleted/>
+<description/>
+<inserted/>
+<name>HR Scoped Core</name>
+<origin_sys_id/>
+<parent display_value=""/>
+<release_date>2018-01-25 17:41:15</release_date>
+<remote_base_update_set display_value=""/>
+<remote_parent_id/>
+<remote_sys_id>0f32eb76dbbbc300aaa69ee6db96198b</remote_sys_id>
+<state>loaded</state>
+<summary/>
+<sys_class_name>sys_remote_update_set</sys_class_name>
+<sys_created_by>vyvyan.howland</sys_created_by>
+<sys_created_on>2018-01-25 17:43:51</sys_created_on>
+<sys_id>e0e26bb6dbbbc300aaa69ee6db9619cb</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_updated_by>vyvyan.howland</sys_updated_by>
+<sys_updated_on>2018-01-25 17:43:51</sys_updated_on>
+<update_set display_value=""/>
+<update_source display_value=""/>
+<updated/>
+</sys_remote_update_set>
+<sys_update_xml action="INSERT_OR_UPDATE">
+<action>INSERT_OR_UPDATE</action>
+<application display_value="Human Resources: Core">d4ac3fff5b311200a4656ede91f91af2</application>
+<category>customer</category>
+<comments/>
+<name>sysevent_in_email_action_3de97b33dba2cf40fe009646db9619b2</name>
+<payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update sys_domain="global" table="sysevent_in_email_action"&gt;&lt;sysevent_in_email_action action="INSERT_OR_UPDATE"&gt;&lt;action&gt;record_action&lt;/action&gt;&lt;active&gt;true&lt;/active&gt;&lt;assignment_operator/&gt;&lt;condition_script/&gt;&lt;description&gt;This inbound email action is triggered when an email is sent to the HR Department email. This email property is defined in HR configuration. &amp;#13;
+&amp;#13;
+This inbound email action will create a new HR Case, setting the opened by, caller, short description, description, contact type. The original email will be stored in the work notes. &amp;#13;
+&amp;#13;
+In addition to being able to explicitly set the values of the above fields within the email, the following is done automatically:&amp;#13;
+&amp;#13;
+1. The caller is set to the the user who sent the email. If the "from" value on the email does not match any SN users, check HR profiles for any matches to the email. This will allow the caller to be set to the user linked to the HR profile in case personal email is used.&amp;#13;
+2. The email subject is set as the short description.&amp;#13;
+3. The whole email is added to the work notes.&amp;#13;
+4. The contact type and the source are set to "Email".&amp;#13;
+5. The  opened for and the subject persons are set to the profile user.&amp;#13;
+&amp;#13;
+Example: &amp;#13;
+This email will create a new HR Case for Fred Luddy &amp;#13;
+&amp;#13;
+From: 	Fred Luddy &amp;lt;fred.luddy@example.com&amp;gt;&amp;#13;
+Subject: 	Human Resources:I need assistance&amp;#13;
+Date: 	June 11, 2013 1:44:55 PM PDT&amp;#13;
+To: 	        askhr@servicenow.com &amp;lt;-- Defined in HR configuration properties.&amp;#13;
+&amp;#13;
+Please provide me with a ..... &amp;#13;
+&amp;#13;
+-----&lt;/description&gt;&lt;event_name&gt;email.read&lt;/event_name&gt;&lt;filter_condition table="sys_email"&gt;subjectLIKEpay^EQ&lt;item endquery="false" field="subject" goto="false" newquery="false" operator="LIKE" or="false" value="pay"/&gt;&lt;item endquery="true" field="" goto="false" newquery="false" operator="=" or="false" value=""/&gt;&lt;/filter_condition&gt;&lt;from/&gt;&lt;name&gt;Create HR Finance Case (AN)&lt;/name&gt;&lt;order&gt;80&lt;/order&gt;&lt;reply_email/&gt;&lt;required_roles/&gt;&lt;script&gt;&lt;![CDATA[//Set all basic HR fields
+
+
+
+if (email.importance !== undefined) {
+   if (email.importance.toLowerCase() == "high")
+      current.priority = 1;
+} else 
+	current.priority = 3;
+
+var bodyText = email.body_text;
+if (!bodyText)
+	bodyText = email.body_html;
+
+current.work_notes = "HR Case created by email:\n\nReceived from: " + email.origemail + "\n\n" + email.subject + "\n\n" + bodyText;
+current.description = bodyText;
+
+// Core email rules assign "Guest" if the from email does not match a user.
+// In this case, check the HR profile personal email, and reassing the case to that user.
+var profile;
+if (gs.getUserID() == '5136503cc611227c0183e96598c4f706') {        //GUEST SYS_ID
+	profile = new GlideRecord('sn_hr_core_profile');
+	profile.addQuery('personal_email', email.origemail);
+	profile.query();
+	if (profile.next()) {
+		current.hr_profile = profile.sys_id;
+		current.opened_for = '';
+		current.caller_id = gs.getUserID();
+		current.opened_by = gs.getUserID();
+		if (profile.user) {
+			current.opened_for = profile.user;
+			current.opened_by = profile.user;
+			current.caller_id = profile.user;
+		}
+	} else {
+		current.caller_id = gs.getUserID();
+		current.opened_by = gs.getUserID();
+		current.opened_for = gs.getUserID();
+	} 
+} else {
+	// Find and attach profile if it exists
+	current.caller_id = gs.getUserID();
+	current.opened_by = gs.getUserID();
+	current.opened_for = gs.getUserID();
+	profile = new GlideRecord('sn_hr_core_profile');
+	profile.addQuery('user', gs.getUserID());
+	profile.query();
+	if (profile.next())
+		current.hr_profile = profile.sys_id;
+}
+
+current.subject_person = current.opened_for;
+var newId = current.sys_id;
+gs.eventQueue('sn_hr_core_case.email.creation', current, newId, email.from);
+]]&gt;&lt;/script&gt;&lt;stop_processing&gt;true&lt;/stop_processing&gt;&lt;sys_class_name&gt;sysevent_in_email_action&lt;/sys_class_name&gt;&lt;sys_created_by&gt;archana&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2017-11-27 18:39:52&lt;/sys_created_on&gt;&lt;sys_domain&gt;global&lt;/sys_domain&gt;&lt;sys_domain_path&gt;/&lt;/sys_domain_path&gt;&lt;sys_id&gt;3de97b33dba2cf40fe009646db9619b2&lt;/sys_id&gt;&lt;sys_mod_count&gt;10&lt;/sys_mod_count&gt;&lt;sys_name&gt;Create HR Finance Case (AN)&lt;/sys_name&gt;&lt;sys_overrides/&gt;&lt;sys_package display_value="Human Resources: Core" source="sn_hr_core"&gt;d4ac3fff5b311200a4656ede91f91af2&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="Human Resources: Core"&gt;d4ac3fff5b311200a4656ede91f91af2&lt;/sys_scope&gt;&lt;sys_update_name&gt;sysevent_in_email_action_3de97b33dba2cf40fe009646db9619b2&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;vyvyan.howland&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2018-01-25 17:42:37&lt;/sys_updated_on&gt;&lt;table&gt;sn_hr_core_case_payroll&lt;/table&gt;&lt;template&gt;contact_type=email^companyDYNAMICd27bf240ef0321002841f7f775c0fbeb^locationDYNAMIC6d418b40ef0321002841f7f775c0fb46^short_descriptionDYNAMICb637bd21ef3221002841f7f775c0fbb6^source=email^hr_service=d628cde49f331200d9011977677fcf02^EQ&lt;/template&gt;&lt;type&gt;new&lt;/type&gt;&lt;/sysevent_in_email_action&gt;&lt;/record_update&gt;</payload>
+<payload_hash>435153356</payload_hash>
+<remote_update_set display_value="HR Scoped Core">e0e26bb6dbbbc300aaa69ee6db9619cb</remote_update_set>
+<replace_on_upgrade>false</replace_on_upgrade>
+<sys_created_by>vyvyan.howland</sys_created_by>
+<sys_created_on>2018-01-25 17:43:51</sys_created_on>
+<sys_id>20e26bb6dbbbc300aaa69ee6db9619cc</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_recorded_at>1612e6a0c990000001</sys_recorded_at>
+<sys_updated_by>vyvyan.howland</sys_updated_by>
+<sys_updated_on>2018-01-25 17:43:51</sys_updated_on>
+<table>sn_hr_core_case_payroll</table>
+<target_name>Create HR Finance Case (AN)</target_name>
+<type>Inbound Email Actions</type>
+<update_domain>global</update_domain>
+<update_guid>1e9227b6fdbbc3001fbd707fba8e5ff2</update_guid>
+<update_guid_history>1e9227b6fdbbc3001fbd707fba8e5ff2:435153356,1c358cde2afa43008f2b4e8ce280bb84:435153356,fc340cdeb4fa43001fe60cf9080717b2:-1191063412,87c076b8c27e4380c6fd16083c998d00:741097292,99f6fd905b360380d52d0314b9e7a73d:-223100564,a9823dd4eef203805d9ac4669fde26ad:2145443168,83efad90cff203803402815aa0435844:605157311,01a9e11cecb2038001c7780f53680821:2145443168,9cef373bdba2cf400ce3c73074a01b1d:992501612,31e97b3343a2cf40d0f72ada88169bb4:1059544923</update_guid_history>
+<update_set display_value=""/>
+<view/>
+</sys_update_xml>
+<sys_update_xml action="INSERT_OR_UPDATE">
+<action>INSERT_OR_UPDATE</action>
+<application display_value="Human Resources: Core">d4ac3fff5b311200a4656ede91f91af2</application>
+<category>customer</category>
+<comments/>
+<name>sysevent_in_email_action_2753315cdbf20380fe009646db961905</name>
+<payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update sys_domain="global" table="sysevent_in_email_action"&gt;&lt;sysevent_in_email_action action="INSERT_OR_UPDATE"&gt;&lt;action&gt;record_action&lt;/action&gt;&lt;active&gt;true&lt;/active&gt;&lt;assignment_operator/&gt;&lt;condition_script/&gt;&lt;description&gt;This inbound email action is triggered when an email is sent to the HR Department email. This email property is defined in HR configuration. &amp;#13;
+&amp;#13;
+This inbound email action will create a new HR Case, setting the opened by, caller, short description, description, contact type. The original email will be stored in the work notes. &amp;#13;
+&amp;#13;
+In addition to being able to explicitly set the values of the above fields within the email, the following is done automatically:&amp;#13;
+&amp;#13;
+1. The caller is set to the the user who sent the email. If the "from" value on the email does not match any SN users, check HR profiles for any matches to the email. This will allow the caller to be set to the user linked to the HR profile in case personal email is used.&amp;#13;
+2. The email subject is set as the short description.&amp;#13;
+3. The whole email is added to the work notes.&amp;#13;
+4. The contact type and the source are set to "Email".&amp;#13;
+5. The  opened for and the subject persons are set to the profile user.&amp;#13;
+&amp;#13;
+Example: &amp;#13;
+This email will create a new HR Case for Fred Luddy &amp;#13;
+&amp;#13;
+From: 	Fred Luddy &amp;lt;fred.luddy@example.com&amp;gt;&amp;#13;
+Subject: 	Human Resources:I need assistance&amp;#13;
+Date: 	June 11, 2013 1:44:55 PM PDT&amp;#13;
+To: 	        askhr@servicenow.com &amp;lt;-- Defined in HR configuration properties.&amp;#13;
+&amp;#13;
+Please provide me with a ..... &amp;#13;
+&amp;#13;
+-----&lt;/description&gt;&lt;event_name&gt;email.read&lt;/event_name&gt;&lt;filter_condition table="sys_email"&gt;subjectLIKEOrder^EQ&lt;item endquery="false" field="subject" goto="false" newquery="false" operator="LIKE" or="false" value="Order"/&gt;&lt;item endquery="true" field="" goto="false" newquery="false" operator="=" or="false" value=""/&gt;&lt;/filter_condition&gt;&lt;from/&gt;&lt;name&gt;Create Procurement Case (AN)&lt;/name&gt;&lt;order&gt;80&lt;/order&gt;&lt;reply_email/&gt;&lt;required_roles/&gt;&lt;script&gt;&lt;![CDATA[//Set all basic HR fields
+
+
+
+if (email.importance !== undefined) {
+   if (email.importance.toLowerCase() == "high")
+      current.priority = 1;
+} else 
+	current.priority = 3;
+
+var bodyText = email.body_text;
+if (!bodyText)
+	bodyText = email.body_html;
+
+current.work_notes = "HR Case created by email:\n\nReceived from: " + email.origemail + "\n\n" + email.subject + "\n\n" + bodyText;
+current.description = bodyText;
+
+//  Add the Cc:
+
+
+
+// Core email rules assign "Guest" if the from email does not match a user.
+// In this case, check the HR profile personal email, and reassing the case to that user.
+var profile;
+if (gs.getUserID() == '5136503cc611227c0183e96598c4f706') {        //GUEST SYS_ID
+	profile = new GlideRecord('sn_hr_core_profile');
+	profile.addQuery('personal_email', email.origemail);
+	profile.query();
+	if (profile.next()) {
+		current.hr_profile = profile.sys_id;
+		current.opened_for = '';
+		current.caller_id = gs.getUserID();
+		current.opened_by = gs.getUserID();
+		if (profile.user) {
+			current.opened_for = profile.user;
+			current.opened_by = profile.user;
+			current.caller_id = profile.user;
+		}
+	} else {
+		current.caller_id = gs.getUserID();
+		current.opened_by = gs.getUserID();
+		current.opened_for = gs.getUserID();
+	} 
+} else {
+	// Find and attach profile if it exists
+	current.caller_id = gs.getUserID();
+	current.opened_by = gs.getUserID();
+	current.opened_for = gs.getUserID();
+	profile = new GlideRecord('sn_hr_core_profile');
+	profile.addQuery('user', gs.getUserID());
+	profile.query();
+	if (profile.next())
+		current.hr_profile = profile.sys_id;
+}
+
+current.subject_person = current.opened_for;
+var newId = current.sys_id;
+gs.eventQueue('sn_hr_core_case.email.creation', current, newId, email.from);
+]]&gt;&lt;/script&gt;&lt;stop_processing&gt;true&lt;/stop_processing&gt;&lt;sys_class_name&gt;sysevent_in_email_action&lt;/sys_class_name&gt;&lt;sys_created_by&gt;archana&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2017-11-28 22:09:02&lt;/sys_created_on&gt;&lt;sys_domain&gt;global&lt;/sys_domain&gt;&lt;sys_domain_path&gt;/&lt;/sys_domain_path&gt;&lt;sys_id&gt;2753315cdbf20380fe009646db961905&lt;/sys_id&gt;&lt;sys_mod_count&gt;7&lt;/sys_mod_count&gt;&lt;sys_name&gt;Create Procurement Case (AN)&lt;/sys_name&gt;&lt;sys_overrides/&gt;&lt;sys_package display_value="Human Resources: Core" source="sn_hr_core"&gt;d4ac3fff5b311200a4656ede91f91af2&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="Human Resources: Core"&gt;d4ac3fff5b311200a4656ede91f91af2&lt;/sys_scope&gt;&lt;sys_update_name&gt;sysevent_in_email_action_2753315cdbf20380fe009646db961905&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;vyvyan.howland&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2018-01-25 17:43:01&lt;/sys_updated_on&gt;&lt;table&gt;sn_hr_core_case_payroll&lt;/table&gt;&lt;template&gt;contact_type=email^companyDYNAMICd27bf240ef0321002841f7f775c0fbeb^locationDYNAMIC6d418b40ef0321002841f7f775c0fb46^short_descriptionDYNAMICb637bd21ef3221002841f7f775c0fbb6^source=email^hr_service=8aaab994db360380fe009646db96194e^EQ&lt;/template&gt;&lt;type&gt;new&lt;/type&gt;&lt;/sysevent_in_email_action&gt;&lt;/record_update&gt;</payload>
+<payload_hash>-1162252468</payload_hash>
+<remote_update_set display_value="HR Scoped Core">e0e26bb6dbbbc300aaa69ee6db9619cb</remote_update_set>
+<replace_on_upgrade>false</replace_on_upgrade>
+<sys_created_by>vyvyan.howland</sys_created_by>
+<sys_created_on>2018-01-25 17:43:51</sys_created_on>
+<sys_id>28e26bb6dbbbc300aaa69ee6db9619cb</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_recorded_at>1612e6a6a220000001</sys_recorded_at>
+<sys_updated_by>vyvyan.howland</sys_updated_by>
+<sys_updated_on>2018-01-25 17:43:51</sys_updated_on>
+<table>sn_hr_core_case_payroll</table>
+<target_name>Create Procurement Case (AN)</target_name>
+<type>Inbound Email Actions</type>
+<update_domain>global</update_domain>
+<update_guid>9cb2e7b63fbbc300189429c0d569af82</update_guid>
+<update_guid_history>9cb2e7b63fbbc300189429c0d569af82:-1162252468,c3663463b7364700344cd56d5bc93bef:-1162252468,4e3f6d6007fe0380044ffd3bdaaf1cc8:609355231,63d06ed029b60380eeede3d77ac337b8:1375616528,9bebbdd47d360380b9e8545f9ebeb924:-641353172,d1a7b5d07036038045bef21c5f68cad2:883697356,a606b1908f360380b01841ccc10d4283:618378156,e353315cacf203801e50d5f40e721106:2145443168</update_guid_history>
+<update_set display_value=""/>
+<view/>
+</sys_update_xml>
+<sys_update_xml action="INSERT_OR_UPDATE">
+<action>INSERT_OR_UPDATE</action>
+<application display_value="Global">global</application>
+<category>customer</category>
+<comments/>
+<name>v_plugin_com.sn_hr_core</name>
+<payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="v_plugin"&gt;&lt;v_plugin action="INSERT_OR_UPDATE"&gt;&lt;active&gt;active&lt;/active&gt;&lt;available_version&gt;2.0.26&lt;/available_version&gt;&lt;definition&gt;&lt;![CDATA[&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;plugin
+	id="com.sn_hr_core"
+    name="Human Resources Scoped App: Core"
+	state="published"
+	version="2.0.26"
+	provider_name="ServiceNow"
+	type="application"
+	help="CSHelp:Human_Resources_Service_Management"
+	licensable="true"
+	license_model="capacity"
+    scope_name="sn_hr_core"
+	scope_sys_id="d4ac3fff5b311200a4656ede91f91af2"&gt;
+
+	&lt;description&gt;
+		WARNING: Be sure that you do not have plugin Human Resources Application: Core activated. This plugin is a new HR application that duplicates some functionality in Human Resources Application: Core. If you have any questions about this plugin, contact your ServiceNow account manager.
+Provides case and change management for HR. Activation of this plugin on production instances may require a separate license. Contact ServiceNow for details.
+	&lt;/description&gt;
+   
+	&lt;requires&gt;
+		&lt;import plugin="com.glide.country"/&gt;
+		&lt;import plugin="com.glide.db_images" /&gt;
+		&lt;import plugin="com.snc.appview"/&gt;
+		&lt;import plugin="com.snc.document_management"/&gt;
+		&lt;import plugin="com.snc.knowledge3"/&gt;
+		&lt;import plugin="com.snc.pdf_generator"/&gt;
+		&lt;import plugin="com.snc.sc_catalog_manager"/&gt;
+		&lt;import plugin="com.snc.signaturepad"/&gt;
+		&lt;import plugin="com.snc.skills_management"/&gt;
+		&lt;import plugin="com.snc.task_activity" /&gt;
+		&lt;import plugin="com.snc.matching_rule"/&gt;
+		&lt;import plugin="com.snc.hr.scoped_security"/&gt;
+		&lt;import plugin="com.sn_hr_integrations"/&gt;
+	&lt;/requires&gt;
+&lt;/plugin&gt;
+]]&gt;&lt;/definition&gt;&lt;description&gt;WARNING: Be sure that you do not have plugin Human Resources Application: Core activated. This plugin is a new HR application that duplicates some functionality in Human Resources Application: Core. If you have any questions about this plugin, contact your ServiceNow account manager.
+Provides case and change management for HR. Activation of this plugin on production instances may require a separate license. Contact ServiceNow for details.&lt;/description&gt;&lt;has_demo_data&gt;true&lt;/has_demo_data&gt;&lt;help&gt;http://docs.servicenow.com/?context=CSHelp:Human_Resources_Service_Management&lt;/help&gt;&lt;id&gt;com.sn_hr_core&lt;/id&gt;&lt;licensable&gt;true&lt;/licensable&gt;&lt;license_model&gt;capacity&lt;/license_model&gt;&lt;name&gt;Human Resources Scoped App: Core&lt;/name&gt;&lt;path&gt;plugin://com.sn_hr_core/&lt;/path&gt;&lt;provider&gt;ServiceNow&lt;/provider&gt;&lt;requires&gt;com.glide.country,com.glide.db_images,com.snc.appview,com.snc.document_management,com.snc.knowledge3,com.snc.pdf_generator,com.snc.sc_catalog_manager,com.snc.signaturepad,com.snc.skills_management,com.snc.task_activity,com.snc.matching_rule,com.snc.hr.scoped_security,com.sn_hr_integrations&lt;/requires&gt;&lt;scope&gt;sn_hr_core&lt;/scope&gt;&lt;state&gt;published&lt;/state&gt;&lt;supports_rollback&gt;false&lt;/supports_rollback&gt;&lt;sys_created_by&gt;vyvyan.howland&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2018-01-25 17:39:32&lt;/sys_created_on&gt;&lt;sys_id&gt;com.sn_hr_core&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_updated_by&gt;vyvyan.howland&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2018-01-25 17:41:48&lt;/sys_updated_on&gt;&lt;trackable&gt;true&lt;/trackable&gt;&lt;type&gt;application&lt;/type&gt;&lt;version&gt;2.0.26&lt;/version&gt;&lt;/v_plugin&gt;&lt;/record_update&gt;</payload>
+<payload_hash>-527958568</payload_hash>
+<remote_update_set display_value="HR Scoped Core">e0e26bb6dbbbc300aaa69ee6db9619cb</remote_update_set>
+<replace_on_upgrade>false</replace_on_upgrade>
+<sys_created_by>vyvyan.howland</sys_created_by>
+<sys_created_on>2018-01-25 17:43:51</sys_created_on>
+<sys_id>e0e26bb6dbbbc300aaa69ee6db9619cc</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_recorded_at>1612e694c630000001</sys_recorded_at>
+<sys_updated_by>vyvyan.howland</sys_updated_by>
+<sys_updated_on>2018-01-25 17:43:51</sys_updated_on>
+<table/>
+<target_name>Human Resources Scoped App: Core</target_name>
+<type>System Plugin</type>
+<update_domain>global</update_domain>
+<update_guid>5262eb760abbc30033eb22ed4e94b835</update_guid>
+<update_guid_history>5262eb760abbc30033eb22ed4e94b835:-527958568</update_guid_history>
+<update_set display_value=""/>
+<view/>
+</sys_update_xml>
+</unload>
